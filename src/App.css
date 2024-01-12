@@ -1,0 +1,5 @@
+.App {
+  border: solid 10px green;
+  min-height: 100vh;
+  padding: 0.8em 3em;
+}
