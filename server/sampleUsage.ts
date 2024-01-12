@@ -51,5 +51,5 @@ function hourToString(hour: number): TimeString {
 }
 
 function dayNumToDateString(day: number): DateString {
-  return `2021-02-${day.toString().padStart(2, '0')}`;
+  return `2024-02-${day.toString().padStart(2, '0')}`;
 }

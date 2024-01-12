@@ -1,4 +1,4 @@
-// ISO8601 ie 2021-02-28
+// ISO8601 ie 2024-02-28
 export type DateString = string;
 
 // HH:MM in 24hr format ie 17:00
