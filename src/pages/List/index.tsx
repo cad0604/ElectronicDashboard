@@ -5,13 +5,11 @@ import ContentHeader from '../../components/ContentHeader';
 import SelectInput from '../../components/SelectInput';
 import HistoryFinanceCard from '../../components/HistoryFinanceCard';
 
-import gains from '../../repositories/gains';
-import expenses from '../../repositories/expenses';
 import ListOfMonths from '../../utils/months';
-import formatCurrency from '../../utils/formatCurrency';
-import formatDate from '../../utils/formatDate';
-
-import { Container, Content } from './styles';
+import { UsageSummary } from "../../../shared";
+import { Container, Content, SnipperDiv } from './styles';
+import HistoryFinanceCardHead from '../../components/HistoryFinanceCardHead';
+import { SpinnerCircularSplit } from 'spinners-react';
 
 interface iRoutesParams {
   match: {
@@ -38,48 +36,45 @@ const List: React.FC<iRoutesParams> = ({ match }) => {
   const [yearSelected, setYearSelected] = useState<number>(
     new Date().getFullYear()
   );
-  const [frequencyselectedFilter, setFrequencyselectedFilter] = useState([
-    'recorrente',
-    'eventual',
-  ]);
+
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const [serverResp, setServerResp] = useState<UsageSummary | undefined>(
+    undefined
+  );
+
+  const historydata: IData[] = [];
 
   const movimentType = match.params.type;
 
   const pageData = useMemo(() => {
-    return movimentType === 'entry-balance'
+    return movimentType === 'total'
       ? {
-          title: 'Total Amount',
-          lineColor: '#4E41F0',
-          data: gains,
-        }
+        title: 'Total Amount',
+        lineColor: '#4E41F0',
+        data: [],
+      }
       : {
-          title: 'Peak Amount',
-          lineColor: '#E44C4E',
-          data: expenses,
-        };
+        title: 'Peak Amount',
+        lineColor: '#E44C4E',
+        data: [],
+      };
   }, [movimentType]);
 
   const years = useMemo(() => {
-    let uniqueYears: number[] = [];
-
-    const { data } = pageData;
-
-    data.forEach((item) => {
-      const date = new Date(item.date);
-      const year = date.getFullYear();
-
-      if (!uniqueYears.includes(year)) {
-        uniqueYears.push(year);
-      }
-    });
-
-    return uniqueYears.map((year) => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const yearArray = [];
+    for (let i = 0; i < 20; i++) {
+      yearArray.push(i);
+    }
+    return yearArray.map((year, index) => {
       return {
-        value: year,
-        label: year,
+        value: currentYear - year,
+        label: currentYear - year,
       };
     });
-  }, [pageData]);
+  }, []);
 
   const months = useMemo(() => {
     return ListOfMonths.map((month, index) => {
@@ -89,25 +84,6 @@ const List: React.FC<iRoutesParams> = ({ match }) => {
       };
     });
   }, []);
-
-  const handlerFrequencyClick = (frequency: string) => {
-    const alreadySelected = frequencyselectedFilter.findIndex(
-      (item) => item === frequency
-    );
-
-    if (alreadySelected >= 0) {
-      const filtered = frequencyselectedFilter.filter(
-        (item) => item !== frequency
-      );
-      setFrequencyselectedFilter(filtered);
-    } else {
-      console.log('foi agora');
-      setFrequencyselectedFilter((prev) => [
-        ...prev,
-        frequency,
-      ]); /*Estado anterior*/
-    }
-  };
 
   const handleMonthSelected = (month: string) => {
     try {
@@ -128,32 +104,65 @@ const List: React.FC<iRoutesParams> = ({ match }) => {
   };
 
   useEffect(() => {
-    const { data } = pageData;
+    (async () => {
+      setLoading(true);
+      const urlAddress = "/api/usage/" + ListOfMonths[monthSelected - 1].slice(0, 3) + "-" + yearSelected.toString();
+      const resp = await fetch(urlAddress);
+      const data: UsageSummary = await resp.json();
+      setServerResp(data);
+      setLoading(false);
+    })();
+  }, [monthSelected, yearSelected, movimentType]);
 
-    const filteredDate = data.filter((item) => {
-      const date = new Date(item.date);
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
+  useEffect(() => {
+    const ListOfDays = [];
+    let index = 0;
+    if (serverResp !== undefined) {
+      const startDate = new Date(serverResp.startDate);
+      const endDate = new Date(serverResp.endDate);
+      const gainStartDate = startDate.getDate();
+      const gainEndDate = endDate.getDate();
+      for (let i = gainStartDate; i <= gainEndDate; i++) {
+        ListOfDays.push(i);
+      }
+      let totalAmount = 0;
+      let peakAmount = 0;
+      let indexDate;
+      let hourlyAverageAmount = 0;
+      let peakTime;
 
-      return (
-        month === monthSelected &&
-        year === yearSelected &&
-        frequencyselectedFilter.includes(item.frequency)
-      );
-    });
+      ListOfDays.map((_, day) => {
+        totalAmount = Number(serverResp.days[index].totalKwh);
+        peakAmount = Number(serverResp.days[index].usagePeak?.kw);
+        indexDate = new Date(serverResp.days[index].date);
+        hourlyAverageAmount = Number(serverResp.days[index].averageHourlyKwh);
+        if (serverResp.days[index].usagePeak?.hour === undefined) peakTime = "";
+        else peakTime = serverResp.days[index].usagePeak?.hour;
+        index++;
+        if (movimentType === 'total') {
+          historydata.push({
+            id: uuid_v4(),
+            description: (Math.round(hourlyAverageAmount * 100) / 100).toString(),
+            amountFormatted: (Math.round(totalAmount * 100) / 100).toString() + " KWh",
+            frequency: 'recorrente',
+            dateFormatted: indexDate.getFullYear().toString() + "-" + (indexDate.getMonth() + 1).toString() + "-" + indexDate.getDate().toString(),
+            tagColor: '#4E41F0'
+          });
+        } else {
+          historydata.push({
+            id: uuid_v4(),
+            description: peakTime === undefined ? "" : peakTime,
+            amountFormatted: (Math.round(peakAmount * 100) / 100).toString() + " KW",
+            frequency: 'eventual',
+            dateFormatted: indexDate.getFullYear().toString() + "-" + (indexDate.getMonth() + 1).toString() + "-" + indexDate.getDate().toString(),
+            tagColor: '#E44C4E'
+          });
+        }
+      });
 
-    const formattedData = filteredDate.map((item) => {
-      return {
-        id: uuid_v4(),
-        description: item.description,
-        amountFormatted: formatCurrency(Number(item.amount)),
-        frequency: item.frequency,
-        dateFormatted: formatDate(item.date),
-        tagColor: item.frequency === 'recorrente' ? '#4E41F0' : '#E44C4E',
-      };
-    });
-    setData(formattedData);
-  }, [pageData, monthSelected, yearSelected, frequencyselectedFilter]);
+      setData(historydata);
+    }
+  }, [serverResp]);
 
   return (
     <Container>
@@ -172,15 +181,32 @@ const List: React.FC<iRoutesParams> = ({ match }) => {
 
 
       <Content>
-        {data.map((item) => (
-          <HistoryFinanceCard
-            key={item.id}
-            tagColor={item.tagColor}
-            title={item.description}
-            subTitle={item.dateFormatted}
-            amount={item.amountFormatted}
-          />
-        ))}
+        <HistoryFinanceCardHead
+          title={movimentType}
+        />
+        {loading === true ? (
+          <SnipperDiv>
+            <SpinnerCircularSplit size={200} />
+          </SnipperDiv>
+        ) : (
+          <div>
+            {data.length > 0 ? (
+              <>
+                {data.map((item) => (
+                  <HistoryFinanceCard
+                    key={item.id}
+                    tagColor={item.tagColor}
+                    title={item.description}
+                    subTitle={item.dateFormatted}
+                    amount={item.amountFormatted}
+                  />
+                ))}
+              </>
+            ) : (
+              <SnipperDiv><h2>No Data!</h2></SnipperDiv>
+            )}
+          </div>
+        )}
       </Content>
     </Container>
   );

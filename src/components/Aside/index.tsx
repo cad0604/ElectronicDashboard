@@ -31,18 +31,18 @@ const Aside: React.FC = () => {
         <Link style={{ textDecoration: 'none' }} to="/">
           <MenuItemLink>
             <MdDashboard />
-            Dashboard
+              Dashboard
           </MenuItemLink>
         </Link>
 
-        <Link style={{ textDecoration: 'none' }} to="/list/entry-balance">
+        <Link style={{ textDecoration: 'none' }} to="/list/total">
           <MenuItemLink>
             <MdArrowUpward />
             Daily Total Amount
           </MenuItemLink>
         </Link>
 
-        <Link style={{ textDecoration: 'none' }} to="/list/exit-balance">
+        <Link style={{ textDecoration: 'none' }} to="/list/peak">
           <MenuItemLink>
             <MdArrowDownward />
             Daily Peak Amount

@@ -7,11 +7,17 @@ import HistoryBox from '../../components/HistoryBox';
 
 import { UsageSummary } from "../../../shared";
 
-import expenses from '../../repositories/expenses';
-import gains from '../../repositories/gains';
 import ListOfMonths from '../../utils/months';
 
 import { Container, Content } from './styles';
+import WalletBoxPeak from '../../components/WalletBoxPeak';
+
+interface IHistoryProps {
+  year: string;
+  month: number;
+  totalAmount: number;
+  peakAmount: number;
+}
 
 const Dashboard: React.FC = () => {
   const [monthSelected, setMonthSelected] = useState<number>(
@@ -24,30 +30,78 @@ const Dashboard: React.FC = () => {
     undefined
   );
 
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+  
+  const[averageAmount, setAverageAmount] = useState<number>(0);
+
+  const[maxPeak, setMaxPeak] = useState<number>(0);
+
+  const [historyBoxData, setHistoryBoxData] = useState<IHistoryProps[]>([]);
+
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const historydata: IHistoryProps[] = [];
+
+  useEffect(() => {
+    const ListOfDays = [];
+    let index = 0;
+    if (serverResp !== undefined) {
+      let tempTotalAmount = 0;
+      let tempAverageAmount = 0;
+      let tempMaxAmount = 0;
+      const startDate = new Date(serverResp.startDate);
+      const endDate = new Date(serverResp.endDate);
+      const gainStartDate = startDate.getDate();
+      const gainEndDate = endDate.getDate();
+      for (let i = gainStartDate; i <= gainEndDate; i++) {
+        ListOfDays.push(i);
+      }
+      ListOfDays.map((_, day) => {
+        let totalAmount = 0;
+        let peakAmount = 0;
+        
+        totalAmount = Number(serverResp.days[index].totalKwh);
+        tempTotalAmount += totalAmount;
+        peakAmount = Number(serverResp.days[index].usagePeak?.kw);
+        if(peakAmount > tempMaxAmount) tempMaxAmount = peakAmount;
+        index++;
+        historydata.push({
+          year:serverResp.startDate.toString(),
+          month: day+1,
+          totalAmount:Math.round(totalAmount * 100) / 100,
+          peakAmount:Math.round(peakAmount * 100) / 100,
+        });
+      });
+      tempAverageAmount = Math.round(tempTotalAmount / index * 100) / 100;
+      setTotalAmount(tempTotalAmount);
+      setAverageAmount(tempAverageAmount);
+      setMaxPeak(tempMaxAmount);
+      setHistoryBoxData(historydata);
+    }
+  }, [serverResp]);
+
   useEffect(() => {
     (async () => {
-      const resp = await fetch("/api/usage");
+      setLoading(true);
+      const urlAddress = "/api/usage/" + ListOfMonths[monthSelected-1].slice(0,3) + "-" + yearSelected.toString();
+      const resp = await fetch(urlAddress);
       const data: UsageSummary = await resp.json();
       setServerResp(data);
+      setLoading(false);
     })();
-  }, []);
+  }, [monthSelected, yearSelected]);
 
   const years = useMemo(() => {
-    let uniqueYears: number[] = [];
-
-    [...expenses, ...gains].forEach((item) => {
-      const date = new Date(item.date);
-      const year = date.getFullYear();
-
-      if (!uniqueYears.includes(year)) {
-        uniqueYears.push(year);
-      }
-    });
-
-    return uniqueYears.map((year) => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const yearArray = [];
+    for(let i = 0; i < 20; i++) {
+      yearArray.push(i);
+    }
+    return yearArray.map((year, index) => {
       return {
-        value: year,
-        label: year,
+        value: currentYear-year,
+        label: currentYear-year,
       };
     });
   }, []);
@@ -60,140 +114,6 @@ const Dashboard: React.FC = () => {
       };
     });
   }, []);
-
-  const totalExpenses = useMemo(() => {
-    let total = 0;
-
-    expenses.forEach((item) => {
-      const date = new Date(item.date);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-
-      if (month === monthSelected && year === yearSelected) {
-        try {
-          total += Number(item.amount);
-        } catch {
-          throw new Error('Invalid amount, amount must be number.');
-        }
-      }
-    });
-    return total;
-  }, [monthSelected, yearSelected]);
-
-  const totalGains = useMemo(() => {
-    let total = 0;
-
-    gains.forEach((item) => {
-      const date = new Date(item.date);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-
-      if (month === monthSelected && year === yearSelected) {
-        try {
-          total += Number(item.amount);
-        } catch {
-          throw new Error('Invalid amount, amount must be number.');
-        }
-      }
-    });
-    return total;
-  }, [monthSelected, yearSelected]);
-
-  const totalBalance = useMemo(() => {
-    return totalGains - totalExpenses;
-  }, [totalGains, totalExpenses]);
-
-  const historydata = useMemo(() => {
-    const ListOfDays = [];
-    let index = 0;
-    if (serverResp !== undefined) {
-      console.log('start work.');
-      const startDate = new Date(serverResp.startDate);
-      const endDate = new Date(serverResp.endDate);
-      const gainStartDate = startDate.getDay();
-      const gainEndDate = endDate.getDay();
-      for (let i = gainStartDate; i <= gainEndDate; i++) {
-        ListOfDays.push(i);
-      }
-      console.log(ListOfDays);
-
-
-      return ListOfDays.map((_, day) => {
-        let amountEntry = 0;
-        let amountOutPut = 0;
-        amountEntry = serverResp.days[index].totalKwh;
-        index++;
-        return {
-          monthNumber: day,
-          month: ListOfMonths[day],
-          amountEntry,
-          amountOutPut,
-        };
-      }).filter((item) => {
-        // const currentMonth = new Date().getMonth();
-        const currentMonth = 11;
-        const currentYear = new Date().getFullYear();
-
-        return (
-          (yearSelected === currentYear && item.monthNumber <= currentMonth) ||
-          yearSelected < currentYear
-        );
-      });
-
-    } else {
-      console.log('end work');
-      return ListOfMonths.map((_, month) => {
-        let amountEntry = 0;
-        gains.forEach((gain) => {
-          const date = new Date(gain.date);
-          const gainMonth = date.getMonth();
-          const gainYear = date.getFullYear();
-
-          if (gainMonth === month && gainYear === yearSelected) {
-            try {
-              amountEntry += Number(gain.amount);
-            } catch {
-              throw new Error(
-                'AmountEntry is invalid. Amountentry must be valid number.'
-              );
-            }
-          }
-        });
-
-        let amountOutPut = 0;
-        expenses.forEach((expense) => {
-          const date = new Date(expense.date);
-          const expenseMonth = date.getMonth();
-          const expenseYear = date.getFullYear();
-
-          if (expenseMonth === month && expenseYear === yearSelected) {
-            try {
-              amountOutPut += Number(expense.amount);
-            } catch {
-              throw new Error(
-                'AmountOutPut is invalid. AmountOutPut must be valid number.'
-              );
-            }
-          }
-        });
-        return {
-          monthNumber: month,
-          month: ListOfMonths[month].substr(0, 3),
-          amountEntry,
-          amountOutPut,
-        };
-      }).filter((item) => {
-        // const currentMonth = new Date().getMonth();
-        const currentMonth = 11;
-        const currentYear = new Date().getFullYear();
-
-        return (
-          (yearSelected === currentYear && item.monthNumber <= currentMonth) ||
-          yearSelected < currentYear
-        );
-      });
-    }
-  }, [yearSelected]);
 
   const handleMonthSelected = useCallback((month: string) => {
     try {
@@ -231,7 +151,7 @@ const Dashboard: React.FC = () => {
         <WalletBox
           title="Total Amount"
           color="#4E41F0"
-          amount={totalBalance}
+          amount={totalAmount}
           icon="dolar"
           footerLabel="Display the total amount of electricity used"
         />
@@ -239,23 +159,26 @@ const Dashboard: React.FC = () => {
         <WalletBox
           title="Average Amount"
           color="#F7931B"
-          amount={totalGains}
+          amount={averageAmount}
           icon="arrowUp"
           footerLabel="Display the average daily amount of electricity used"
         />
 
-        <WalletBox
+        <WalletBoxPeak
           title="Usage Peak"
           color="#E44C4E"
-          amount={totalExpenses}
+          amount={maxPeak}
           icon="arrowDown"
           footerLabel="Display the peak amount of electricity used"
         />
 
         <HistoryBox
-          data={historydata}
-          lineColorAmountEntry="#f7931b"
-          lineColorAmountOutPut="#e44c4e"
+         data = {historyBoxData}
+
+          // data=[{month:1, totalAmount:304, peakAmount:19}]
+          lineColorTotalAmount= "#f7931b"
+          lineColorPeakAmount="#e44c4e"
+          loading={loading}
         />
 
       </Content>

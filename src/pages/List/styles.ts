@@ -48,3 +48,11 @@ export const Filters = styled.div`
     opacity: 1;
   }
 `;
+
+export const SnipperDiv = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+
+  margin-top: 20vh;
+`;

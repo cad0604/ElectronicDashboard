@@ -7,3 +7,10 @@ export const Content = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
 `;
+export const SnipperDiv = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+
+  margin-top: 20vh;
+`;

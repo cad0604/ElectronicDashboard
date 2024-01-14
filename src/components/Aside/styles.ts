@@ -42,12 +42,12 @@ export const MenuItemLink = styled.a`
   transition: opacity 0.3s;
 
   &:hover {
-    opacity: 0.7;
+    opacity: 0.2;
   }
-
+  font-size: 22px;
   > svg {
     font-size: 18px;
-    margin-right: 5px;
+    margin-right: 6px;
   }
 `;
 

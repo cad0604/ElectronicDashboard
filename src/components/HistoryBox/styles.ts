@@ -66,3 +66,10 @@ export const ChartContainer = styled.div`
   flex: 1;
   height: 260px;
 `;
+export const SnipperDiv = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+
+  padding-top: 10vh;
+`;

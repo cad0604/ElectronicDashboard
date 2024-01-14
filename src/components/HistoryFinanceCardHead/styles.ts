@@ -11,7 +11,7 @@ export const Container = styled.li`
   border-radius: 8px;
 
   margin: 3px 0;
-  padding: 8px 10px;
+  padding: 12px 10px;
 
   display: flex;
   justify-content: space-between;
@@ -51,14 +51,22 @@ export const Tag = styled.div<ITagProps>`
   left: 0;
 `;
 
-export const Small = styled.small`
+export const Small = styled.h3`
   margin-left: 10vw;
 `
 
-export const H5 = styled.h5`
-  margin-right: 10vw
+export const H5 = styled.h3`
+  margin-right: 4vw
 `
 
-// export const HX = styled.h5`
-//   margin-right: 10vw
-// `
+export const HX = styled.h3`
+  margin-left: 7vw
+`
+
+export const HP5 = styled.h3`
+  margin-right: 8vw
+`
+
+export const HPX = styled.h3`
+  margin-left: 2vw
+`

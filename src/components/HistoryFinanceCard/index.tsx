@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Container, Tag } from './styles';
+import { Container, Tag, Small, H5 } from './styles';
 
 interface HistoryFinanceCardProps {
   tagColor: string;
@@ -18,9 +18,10 @@ const HistoryFinanceCard: React.FC<HistoryFinanceCardProps> = ({
   <Container>
     <Tag color={tagColor} />
     <div>
-      <small>{subTitle}</small>
+      <Small className=''>{subTitle}</Small>
     </div>
-    <h3>{amount}</h3>
+    <h5>{amount}</h5>
+    <H5>{title}</H5>
   </Container>
 );
 

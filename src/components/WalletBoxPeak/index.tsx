@@ -15,7 +15,7 @@ interface IWalletBoxProps {
   color: string;
 }
 
-const WalletBox: React.FC<IWalletBoxProps> = ({
+const WalletBoxPeak: React.FC<IWalletBoxProps> = ({
   title,
   amount,
   footerLabel,
@@ -34,7 +34,7 @@ const WalletBox: React.FC<IWalletBoxProps> = ({
       <h1>
         <CountUp
           end={amount}
-          prefix={'KWh '}
+          prefix={'KW '}
           separator="."
           decimal=","
           decimals={2}
@@ -46,4 +46,4 @@ const WalletBox: React.FC<IWalletBoxProps> = ({
   );
 };
 
-export default WalletBox;
+export default WalletBoxPeak;
