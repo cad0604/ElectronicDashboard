@@ -16,7 +16,7 @@ export async function loadUsage(dateFilter: string): Promise<UsageSummary> {
   );
 
   const dataArr = data.toString().split(",");
-
+  
   let foundDataIndex = dataArr.findIndex((element) => element.includes(dateFilter));
 
   if (foundDataIndex < 0) {
@@ -40,16 +40,31 @@ export async function loadUsage(dateFilter: string): Promise<UsageSummary> {
     let totalKwh = 0;
     let peakKwh = 0;
     let peakHour = 0;
-    for (let i = 0; i < 47; i++) {
-      totalKwh += Number(dataArr[foundDataIndex + i + 2]);
+    // The csv file contains 48 items of usage data at 30-minute intervals from 00:00 to 23:30 and 
+    // contains 5 items for "NMI,METER SERIAL NUMBER,CON/GEN,DATE,ESTIMATED". Thus total items is 53.
+
+    for (let i = 0; i < 48; i++) {
+      // But dataArr varieble has splited with ",", so the array has recognize that 
+      // the ending item of row and starting item of next row are one element.
+      // for example: ... ,0.384,0.083
+      //              1111111111, ...
+      // in above rows, "0.083'\n'1111111111" is recognized by dataArr to one element.
+      // Therefore, we have to splite the element with '\n'.
+      totalKwh += Number(dataArr[foundDataIndex + i + 2].split('\n')[0]);
+
+      // for calculating the usage peak amount, we have to calculate the amount for 1 hours.
+      // The csv file records usage at 30-minute intervals. so I added usages at '..:00' and '..:30'. 
+      // at '..:30', i is odd and at '..:00', i is even.
       if (!(i % 2)) {
-        if (peakKwh < Number(dataArr[foundDataIndex + i + 1]) + Number(dataArr[foundDataIndex + i + 2])) {
-          peakKwh = Number(dataArr[foundDataIndex + i + 1]) + Number(dataArr[foundDataIndex + i + 2]);
-          peakHour = Math.round((i - 1) / 2);
+        if (peakKwh < Number(dataArr[foundDataIndex + i + 1].split('\n')[0]) + Number(dataArr[foundDataIndex + i + 2].split('\n')[0])) {
+          peakKwh = Number(dataArr[foundDataIndex + i + 1].split('\n')[0]) + Number(dataArr[foundDataIndex + i + 2].split('\n')[0]);
+          // peakHour must be a round number. Because i is odd, so, peakHour is round number.
+          peakHour = (i - 1) / 2;
         }
       }
+
     }
-    
+
     const usagePeak: UsagePeak = {
       hour: hourToString(peakHour),
       kw: peakKwh,
@@ -62,7 +77,8 @@ export async function loadUsage(dateFilter: string): Promise<UsageSummary> {
     });
 
     lastDay = Number(dataArr[foundDataIndex].slice(0, 2));
-
+    // csv file contains 53 items in one row, but dataArr has recognize the 52 items in one row, because 
+    // last item of row and first item of next row of csv file become one element of dataArr.
     foundDataIndex += 52;
     if (foundDataIndex > dataArr.length || !(dataArr[foundDataIndex].includes(dateFilter))) {
       loopVariable = false;
